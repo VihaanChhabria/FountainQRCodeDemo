@@ -118,9 +118,9 @@ const GeneratorPage = () => {
         <input
           id="chunkSizeSlider"
           type="range"
-          min="10"
+          min="1"
           max="2953"
-          step="10"
+          step="2"
           value={chunkSize}
           onChange={(e) => setChunkSize(Number(e.target.value))}
           style={{ width: "100%" }}
@@ -131,9 +131,9 @@ const GeneratorPage = () => {
         <input
           id="intervalSlider"
           type="range"
-          min="100"
+          min="1"
           max="2000"
-          step="5"
+          step="2"
           value={intervalTime}
           onChange={(e) => setIntervalTime(Number(e.target.value))}
           style={{ width: "100%" }}
