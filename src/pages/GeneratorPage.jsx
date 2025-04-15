@@ -42,6 +42,7 @@ const GeneratorPage = () => {
         {
           scale: 50,
           margin: 1,
+          errorCorrectionLevel: 'H',
         },
         function (error) {
           if (error) console.error(error);
