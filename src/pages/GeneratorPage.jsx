@@ -10,6 +10,10 @@ const GeneratorPage = () => {
 
   const [fileContent, setFileContent] = useState("");
   const [qrImages, setQrImages] = useState([]);
+  const [oldSettings, setOldSettings] = useState({
+    fileContent: fileContent,
+    chunkSize: chunkSize,
+  });
 
   const canvasRef = useRef(null);
   const cycleIntervalRef = useRef(null);
@@ -19,9 +23,33 @@ const GeneratorPage = () => {
 
   const navigate = useNavigate();
 
-  const generateQrCodes = (text, chunkSize, callback) => {
+  const generateQrCodes = async (callback) => {
+    if (
+      JSON.stringify(oldSettings) ==
+      JSON.stringify({
+        fileContent: fileContent,
+        chunkSize: chunkSize,
+      })
+    ) {
+      callback(qrImages);
+      return;
+    }
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "16px Arial";
+    ctx.fillStyle = "white";
+    ctx.fillText(
+      "Generating QR codes... Please wait.",
+      canvas.width / 2,
+      canvas.height / 2
+    );
+
     const encoder = new TextEncoder();
-    const encodedText = encoder.encode(text);
+    const encodedText = encoder.encode(fileContent);
     const chunks = [];
 
     for (let i = 0; i < encodedText.length; i += chunkSize) {
@@ -30,40 +58,62 @@ const GeneratorPage = () => {
     }
 
     const newQrImages = [];
-    chunks.forEach((chunk, index) => {
+    for (let index = 0; index < chunks.length; index++) {
+      const chunk = chunks[index];
       const canvas = document.createElement("canvas");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillText(
+        `Generating QR codes... Please wait.`,
+        canvas.width / 2,
+        canvas.height / 2
+      );
+      ctx.fillText(
+        `Chunk ${index + 1} of ${chunks.length}`,
+        canvas.width / 2,
+        (canvas.height / 2) + 20
+      );
+      await new Promise((resolve, reject) => {
+        QRCode.toCanvas(
+          canvas,
+          JSON.stringify({
+            id: `${index + 1}${index + 1 == chunks.length ? "_" : ""}`,
+            data: `${chunk}`,
+          }),
+          {
+            scale: 50,
+            margin: 1,
+            errorCorrectionLevel: "H",
+          },
+          function (error) {
+            if (error) {
+              console.error(error);
+              reject(error);
+            } else {
+              console.log(`QR code for chunk ${index + 1} generated`);
+              const imageUrl = canvas.toDataURL("image/png");
+              newQrImages.push(imageUrl);
 
-      QRCode.toCanvas(
-        canvas,
-        JSON.stringify({
-          id: `${index + 1}${index + 1 == chunks.length ? "_" : ""}`,
-          data: `${chunk}`,
-        }),
-        {
-          scale: 50,
-          margin: 1,
-          errorCorrectionLevel: 'H',
-        },
-        function (error) {
-          if (error) console.error(error);
-          else {
-            console.log(`QR code for chunk ${index + 1} generated`);
-            const imageUrl = canvas.toDataURL("image/png");
-            newQrImages.push(imageUrl);
-
-            if (newQrImages.length === chunks.length) {
-              setQrImages(newQrImages);
-              callback(newQrImages);
+              if (newQrImages.length === chunks.length) {
+                setQrImages(newQrImages);
+                callback(newQrImages);
+              }
+              resolve();
             }
           }
-        }
-      );
-    });
+        );
+      });
+
+      await new Promise((r) => setTimeout(r, 0));
+    }
   };
 
   const startCycling = () => {
+    setOldSettings({
+      fileContent: fileContent,
+      chunkSize: chunkSize,
+    });
     if (fileContent) {
-      generateQrCodes(fileContent, chunkSize, (images) => {
+      generateQrCodes((images) => {
         setIsCycling(true);
         currentImageIndexRef.current = 0;
 
@@ -83,8 +133,10 @@ const GeneratorPage = () => {
           currentImageIndexRef.current =
             (currentImageIndexRef.current + 1) % images.length;
         }, intervalTime);
+        console.log("hey im done");
       });
     }
+    console.log("test");
   };
 
   return (
@@ -161,7 +213,6 @@ const GeneratorPage = () => {
         </button>
         <button
           onClick={() => {
-            setQrImages([]);
             setIsCycling(false);
             clearInterval(cycleIntervalRef.current);
           }}
