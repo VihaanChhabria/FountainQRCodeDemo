@@ -66,9 +66,12 @@ const GeneratorPage = () => {
       )
     );
 
+    const numChunks = Math.ceil(compressed.length / chunkSize);
+    const realChunkSize = Math.ceil(compressed.length / numChunks);
+
     const chunks = [];
-    for (let i = 0; i < compressed.length; i += chunkSize) {
-      const chunk = compressed.slice(i, i + chunkSize);
+    for (let i = 0; i < compressed.length; i += realChunkSize) {
+      const chunk = compressed.slice(i, i + realChunkSize);
       chunks.push(chunk);
     }
 
