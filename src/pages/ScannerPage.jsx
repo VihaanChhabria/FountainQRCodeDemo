@@ -78,7 +78,9 @@ function ScannerPage() {
   }, [scannedData]);
 
   const compileAndDownload = async () => {
-    const combinedCompressedData = scannedData.map((data) => data.data).join("");
+    const combinedCompressedData = scannedData
+      .map((data) => data.data)
+      .join("");
     console.log(combinedCompressedData);
     const combinedUncompressedData = await new Promise((resolve, reject) => {
       brotliDecompress(
@@ -127,7 +129,14 @@ function ScannerPage() {
         }}
       >
         <button onClick={compileAndDownload}>Compile And Download Data</button>
-        <button onClick={() => setScannedData([])}>Clear Data</button>
+        <button
+          onClick={() => {
+            setScannedData([]);
+            setFinishedScan(false);
+          }}
+        >
+          Clear Data
+        </button>
       </div>
 
       <button style={{ marginTop: "2%" }} onClick={() => navigate("/")}>
