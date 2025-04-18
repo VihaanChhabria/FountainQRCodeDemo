@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import QRCode from "qrcode";
 import { useNavigate } from "react-router-dom";
+import { compress as brotliCompress } from "fflate";
 
 const GeneratorPage = () => {
   const [chunkSize, setChunkSize] = useState(50);
@@ -34,6 +35,7 @@ const GeneratorPage = () => {
       callback(qrImages);
       return;
     }
+
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
 
@@ -50,11 +52,24 @@ const GeneratorPage = () => {
 
     const encoder = new TextEncoder();
     const encodedText = encoder.encode(fileContent);
-    const chunks = [];
+    const compressed = btoa(
+      String.fromCharCode(
+        ...(await new Promise((resolve, reject) => {
+          brotliCompress(encodedText, (err, result) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve(result);
+            }
+          });
+        }))
+      )
+    );
 
-    for (let i = 0; i < encodedText.length; i += chunkSize) {
-      const chunk = encodedText.slice(i, i + chunkSize);
-      chunks.push(new TextDecoder().decode(chunk));
+    const chunks = [];
+    for (let i = 0; i < compressed.length; i += chunkSize) {
+      const chunk = compressed.slice(i, i + chunkSize);
+      chunks.push(chunk);
     }
 
     const newQrImages = [];
@@ -70,7 +85,7 @@ const GeneratorPage = () => {
       ctx.fillText(
         `Chunk ${index + 1} of ${chunks.length}`,
         canvas.width / 2,
-        (canvas.height / 2) + 20
+        canvas.height / 2 + 20
       );
       await new Promise((resolve, reject) => {
         QRCode.toCanvas(
@@ -133,10 +148,8 @@ const GeneratorPage = () => {
           currentImageIndexRef.current =
             (currentImageIndexRef.current + 1) % images.length;
         }, intervalTime);
-        console.log("hey im done");
       });
     }
-    console.log("test");
   };
 
   return (

@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import QrScanner from "qr-scanner";
 import { useNavigate } from "react-router-dom";
+import { decompress as brotliDecompress } from "fflate";
 
 function ScannerPage() {
   const [scannedData, setScannedData] = useState([]);
   const [finishedScan, setFinishedScan] = useState(false);
   const navigate = useNavigate();
 
-  const onScan = (result) => {
+  const onScan = async (result) => {
     const jsonResult = JSON.parse(result.data);
 
     setScannedData((prevData) => {
@@ -76,9 +77,25 @@ function ScannerPage() {
     }
   }, [scannedData]);
 
-  const compileAndDownload = () => {
-    const combinedData = scannedData.map((data) => data.data).join("");
-    const blob = new Blob([combinedData], { type: "text/plain" });
+  const compileAndDownload = async () => {
+    const combinedCompressedData = scannedData.map((data) => data.data).join("");
+    console.log(combinedCompressedData);
+    const combinedUncompressedData = await new Promise((resolve, reject) => {
+      brotliDecompress(
+        Uint8Array.from(atob(combinedCompressedData), (c) => c.charCodeAt(0)),
+        (err, result) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(result);
+          }
+        }
+      );
+    });
+
+    const decodedData = new TextDecoder().decode(combinedUncompressedData);
+
+    const blob = new Blob([decodedData], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -109,18 +126,11 @@ function ScannerPage() {
           gap: "1rem",
         }}
       >
-        <button onClick={compileAndDownload}>
-          Compile And Download Data
-        </button>
-        <button onClick={() => setScannedData([])}>
-          Clear Data
-        </button>
+        <button onClick={compileAndDownload}>Compile And Download Data</button>
+        <button onClick={() => setScannedData([])}>Clear Data</button>
       </div>
 
-      <button
-        style={{ marginTop: "2%" }}
-        onClick={() => navigate("/")}
-      >
+      <button style={{ marginTop: "2%" }} onClick={() => navigate("/")}>
         Go To Home Page
       </button>
     </div>
